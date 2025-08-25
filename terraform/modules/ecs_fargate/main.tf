@@ -1,7 +1,7 @@
 variable "subnet1" {}
 variable "subnet2" {}
-variable "loadBalancer_listener_for_ecs" {}
-variable "aws_lb_target_group_arn" {}
+# variable "loadBalancer_listener_for_ecs" {}
+# variable "aws_lb_target_group_arn" {}
 variable "security_group_vpc" {}
 
 resource "aws_ecs_cluster" "ECS" {
@@ -10,6 +10,12 @@ resource "aws_ecs_cluster" "ECS" {
   tags = {
     Name = "my-new-cluster"
   }
+}
+
+# CloudWatch Logs (so you can see Docker Container logs)
+resource "aws_cloudwatch_log_group" "ecs" {
+  name              = "/ecs/image-processor"
+  retention_in_days = 14
 }
 
 resource "aws_ecs_service" "ECS-Service" {
@@ -22,14 +28,14 @@ resource "aws_ecs_service" "ECS-Service" {
   desired_count                      = 2
   deployment_minimum_healthy_percent = 100
   deployment_maximum_percent         = 200
-  depends_on                         = [var.loadBalancer_listener_for_ecs, aws_iam_role.ecs_execution_role]
+  depends_on                         = [aws_iam_role.ecs_execution_role]
 
 
-  load_balancer {
-    target_group_arn = var.aws_lb_target_group_arn
-    container_name   = "main-container"
-    container_port   = 80
-  }
+  # load_balancer {
+  #   target_group_arn = var.aws_lb_target_group_arn
+  #   container_name   = "main-container"
+  #   container_port   = 80
+  # }
 
 
   network_configuration {
@@ -64,14 +70,18 @@ resource "aws_ecs_task_definition" "TD" {
           hostPort      = 80
         }
       ]
+      # So Cloudwatch can get Docker Container logs from ECS using "awslogs", which is the CloudWatch Logs log driver:
+      logConfiguration = {
+        logDriver = "awslogs",
+        options = {
+          awslogs-group         = aws_cloudwatch_log_group.ecs.name,
+          awslogs-region        = "eu-central-1",
+          awslogs-stream-prefix = "ecs"
+        }
+      }
     }
   ])
 }
-
-
-# data "aws_ecs_task_definition" "TD" {
-#   task_definition = aws_ecs_task_definition.TD.family
-# }
 
 
 # 1. IAM Execution role (image pulls + logs):
@@ -95,7 +105,7 @@ resource "aws_iam_role_policy_attachment" "ecs_execution_managed" {
 }
 
 
-# 2. IAM Task role (your app: SQS + S3):
+# 2. IAM Task role (your app: SQS + S3 + etc.):
 # resource "aws_iam_role" "ecs_task_role" {
 #   name = "ecs-task-role"
 #   assume_role_policy = jsonencode({
