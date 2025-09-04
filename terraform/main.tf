@@ -39,9 +39,13 @@ module "ecs_fargate" {
 
   subnet1 = module.vpc_for_ecs.subnet1
   subnet2 = module.vpc_for_ecs.subnet2
+  security_group_vpc = module.vpc_for_ecs.security_group_vpc
+  image_processing_queue_ARN = module.sqs.image_processing_queue_ARN
+  image_upload_bucket_arn = module.input_s3.image_upload_bucket_arn
+  image_upload_bucket_name = module.input_s3.image_upload_bucket_name
+  image_processing_queue_url = module.sqs.image_processing_queue_url
   # loadBalancer_listener_for_ecs = module.loadBalancer_for_ecs
   # aws_lb_target_group_arn = module.loadBalancer_for_ecs.aws_lb_target_group_arn
-  security_group_vpc = module.vpc_for_ecs.security_group_vpc
 }
 
 module "eventBridge" {
@@ -49,6 +53,7 @@ module "eventBridge" {
 
   image_processing_queue_ARN = module.sqs.image_processing_queue_ARN
   image_processing_queue_id = module.sqs.image_processing_queue_id
+  image_upload_bucket_name = module.input_s3.image_upload_bucket_name
 }
 
 module "sns" {

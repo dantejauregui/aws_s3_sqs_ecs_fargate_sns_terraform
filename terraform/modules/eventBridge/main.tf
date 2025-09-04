@@ -1,5 +1,6 @@
 variable "image_processing_queue_ARN" {}
 variable "image_processing_queue_id" {}
+variable "image_upload_bucket_name" {}
 
 # Terraform registry url: https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_event_rule
 resource "aws_cloudwatch_event_rule" "s3_upload_event_rule" {
@@ -11,9 +12,15 @@ resource "aws_cloudwatch_event_rule" "s3_upload_event_rule" {
         "source": ["aws.s3"],
         "detail-type": ["Object Created"],
         "detail": {
-            "bucket": {
-                "name": ["image-upload-bucket"]
-            }
+          "bucket": {
+              "name": [var.image_upload_bucket_name]
+          },
+          # optional filter to only process "uploads/" keys:
+          "object": {
+            "key": [{
+              "prefix": "uploads/"
+            }]
+          }
         }
     })
 }
@@ -41,7 +48,7 @@ resource "aws_cloudwatch_event_target" "s3_event_to_sqs" {
 EOF
   }
 }
-# At the end after the Input is transformed, the SQS/ECS target will receive a cleaner json for the Thumbnail task:
+# At the end, after the Input is transformed, the SQS/ECS target will receive a cleaner json for the Thumbnail task:
 # {
 #   "bucket": "image-upload-bucket",
 #   "key": "uploads/your-photo.jpg"
@@ -50,7 +57,7 @@ EOF
 
 
 
-# AND Permission for EventBridge to Send to SQS:
+# Allow the specific EventBridge rule to SendMessage to your SQS queue:
 resource "aws_sqs_queue_policy" "allow_eventbridge" {
   queue_url = var.image_processing_queue_id
 
