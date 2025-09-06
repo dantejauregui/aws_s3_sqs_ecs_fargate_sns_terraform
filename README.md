@@ -21,9 +21,9 @@ Initially was planned to use ALB load balancer, but now will be omited/commented
 First go to the `cd python_ecs` folder and then we build a amd64 image using the following commands and push it to DockerHub:
 
 ```
-export DOCKERHUB_USER="dantej"
+export DOCKERHUB_USER="<YOUR_DOCKERHUB_USER>"
 export IMAGE="image-processor"
-export TAG="1.0.1"
+export TAG="<YOUR_TAG>"
 
 docker buildx build --platform linux/amd64 -t ${DOCKERHUB_USER}/${IMAGE}:${TAG} --push .
 ```
