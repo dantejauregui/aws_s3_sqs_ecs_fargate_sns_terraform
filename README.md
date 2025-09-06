@@ -27,12 +27,3 @@ export TAG="<YOUR_TAG>"
 
 docker buildx build --platform linux/amd64 -t ${DOCKERHUB_USER}/${IMAGE}:${TAG} --push .
 ```
-
-
-Testing using temporal SKIP of Eventbridge issue:
-Please use:
-```
-aws sqs send-message \
-  --queue-url "$QUEUE_URL" \
-  --message-body '{"bucket":"<YOUR-BUCKET-NAME>","key":"uploads/brand1.jpg"}'
-```
