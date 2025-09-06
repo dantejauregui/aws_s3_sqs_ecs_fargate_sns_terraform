@@ -5,6 +5,9 @@ variable "image_processing_queue_ARN" {}
 variable "image_upload_bucket_arn" {}
 variable "image_upload_bucket_name" {}
 variable "image_processing_queue_url" {}
+variable "sns_topic_name" {}
+variable "sns_topic_ARN" {}
+
 
 resource "aws_ecs_cluster" "ECS" {
   name = "my-cluster"
@@ -55,14 +58,14 @@ resource "aws_ecs_task_definition" "TD" {
   cpu                      = 1024
   memory                   = 2048
 
-  execution_role_arn = aws_iam_role.ecs_execution_role.arn  # IAM defined below for ECS agent (pull image, logs)
-  task_role_arn      = aws_iam_role.ecs_task_role.arn       # IAM defined below for our app (SQS/S3)
+  execution_role_arn = aws_iam_role.ecs_execution_role.arn # IAM defined below for ECS agent (pull image, logs)
+  task_role_arn      = aws_iam_role.ecs_task_role.arn      # IAM defined below for our app (SQS/S3)
 
 
   container_definitions = jsonencode([
     {
       name      = "main-container"
-      image     = "dantej/image-processor:1.0.0"
+      image     = "dantej/image-processor:1.0.1"
       cpu       = 1024
       memory    = 2048
       essential = true
@@ -75,14 +78,14 @@ resource "aws_ecs_task_definition" "TD" {
 
       # Env. Variables for Python Docker Container:
       environment = [
-        { "name": "QUEUE_URL",       "value": var.image_processing_queue_url },
-        { "name": "BUCKET",          "value": var.image_upload_bucket_name },
-        { "name": "UPLOADS_PREFIX",  "value": "uploads/" },
-        { "name": "THUMB_PREFIX",    "value": "thumbnails/" },
-        { "name": "THUMB_MAX_WIDTH", "value": "512" }
-        # { "name": "SNS_TOPIC_ARN", "value": var.notification_topic_arn } # optional notify
+        { "name" : "QUEUE_URL", "value" : var.image_processing_queue_url },
+        { "name" : "BUCKET", "value" : var.image_upload_bucket_name },
+        { "name" : "UPLOADS_PREFIX", "value" : "uploads/" },
+        { "name" : "THUMB_PREFIX", "value" : "thumbnails/" },
+        { "name" : "THUMB_MAX_WIDTH", "value" : "512" },
+        { "name" : "SNS_TOPIC_ARN", "value" : var.sns_topic_ARN } # for SNS notification
       ]
-      
+
       # So Cloudwatch can get Docker Container logs from ECS using "awslogs", which is the CloudWatch Logs log driver:
       logConfiguration = {
         logDriver = "awslogs",
@@ -124,9 +127,9 @@ resource "aws_iam_role" "ecs_task_role" {
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
     Statement = [{
-      Effect: "Allow",
+      Effect : "Allow",
       Principal = { Service = "ecs-tasks.amazonaws.com" },
-      Action = "sts:AssumeRole"
+      Action    = "sts:AssumeRole"
     }]
   })
 }
@@ -137,35 +140,41 @@ resource "aws_iam_role_policy" "ecs_task_permissions" {
 
   policy = jsonencode({
     Version = "2012-10-17",
-    Statement: [
+    Statement : [
       {
-        Effect: "Allow",
-        Action: ["sqs:ReceiveMessage","sqs:DeleteMessage","sqs:GetQueueAttributes"],
-        Resource: var.image_processing_queue_ARN
+        Effect : "Allow",
+        Action : ["sqs:ReceiveMessage", "sqs:DeleteMessage", "sqs:GetQueueAttributes"],
+        Resource : var.image_processing_queue_ARN
       },
       {
-        Effect: "Allow",
-        Action: ["s3:ListBucket"],
-        Resource: var.image_upload_bucket_arn,
-        Condition: {
-          "StringLike": {
-            "s3:prefix": ["uploads/*", "thumbnails/*"]
+        Effect : "Allow",
+        Action : ["s3:ListBucket"],
+        Resource : var.image_upload_bucket_arn,
+        Condition : {
+          "StringLike" : {
+            "s3:prefix" : ["uploads/*", "thumbnails/*"]
           }
         }
       },
       {
-        Effect: "Allow",
-        Action: ["s3:GetObject"],
-        Resource: [
+        Effect : "Allow",
+        Action : ["s3:GetObject"],
+        Resource : [
           "${var.image_upload_bucket_arn}/uploads/*",
           "${var.image_upload_bucket_arn}/thumbnails/*"
         ]
       },
       {
-        Effect: "Allow",
-        Action: ["s3:PutObject"],
-        Resource: "${var.image_upload_bucket_arn}/thumbnails/*"
+        Effect : "Allow",
+        Action : ["s3:PutObject"],
+        Resource : "${var.image_upload_bucket_arn}/thumbnails/*"
+      },
+      {
+        "Effect" : "Allow",
+        "Action" : ["sns:Publish"],
+        "Resource" : var.sns_topic_ARN
       }
+
     ]
   })
 }

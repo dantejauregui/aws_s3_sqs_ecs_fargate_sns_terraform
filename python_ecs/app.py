@@ -80,7 +80,7 @@ def make_thumbnail(image_bytes: bytes, max_width: int) -> (bytes, str):
         return out.read(), content_type
 
 
-# Method that call the other above methods:
+# Method that call the others methods above:
 def process_message(msg):
     body = msg["Body"]
     try:
@@ -143,9 +143,15 @@ def process_message(msg):
 
     if sns and SNS_TOPIC_ARN:
         try:
+            message_text = (
+                "Your image is ready!\n\n"
+                f"Original: s3://{bucket}/{key}\n"
+                f"Thumbnail: s3://{bucket}/{thumb_key}\n"
+                "Thanks!\n"
+            )
             sns.publish(
                 TopicArn=SNS_TOPIC_ARN,
-                Message=json.dumps({"bucket": bucket, "key": key, "thumbnail": thumb_key}),
+                Message=message_text,
                 Subject="Image processed",
             )
         except Exception:

@@ -18,23 +18,14 @@ Initially was planned to use ALB load balancer, but now will be omited/commented
 
 
 # Docker image for ECS
-First go to the `cd python_ecs` folder and then we build a multi arch image using the following commands and push it to DockerHub:
+First go to the `cd python_ecs` folder and then we build a amd64 image using the following commands and push it to DockerHub:
 
 ```
-docker buildx create --name multi --use
-docker buildx inspect --bootstrap
-```
-
-```
-export DOCKERHUB_USER="<our_dockerhub_username>"
+export DOCKERHUB_USER="dantej"
 export IMAGE="image-processor"
-export TAG="1.0.0"
+export TAG="1.0.1"
 
-docker buildx build \
-  --platform linux/amd64,linux/arm64/v8 \
-  -t ${DOCKERHUB_USER}/${IMAGE}:${TAG} \
-  -t ${DOCKERHUB_USER}/${IMAGE}:latest \
-  --push .
+docker buildx build --platform linux/amd64 -t ${DOCKERHUB_USER}/${IMAGE}:${TAG} --push .
 ```
 
 
